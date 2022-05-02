@@ -9,16 +9,19 @@ import (
 	"github.com/khanhicetea/hitnforget/database"
 )
 
-func Worker(wId int, queueName string, httpTimeOut time.Duration) {
-	fmt.Println("Worker", wId, "is ready to work on queue", queueName, "...")
+func Worker(wId int, workingQueue string, failedQueue string) {
+	fmt.Println("Worker", wId, "is ready to work on queue", workingQueue, "...")
 
 	rdb, ctx := database.NewRedis()
 	client := &http.Client{
-		Timeout: httpTimeOut,
+		Timeout: time.Minute,
 	}
 
+	redisKeyWorkingQueue := database.QueueRedisKey(workingQueue)
+	redisKeyFailedQueue := database.QueueRedisKey(failedQueue)
+
 	for {
-		popRequestID, err := rdb.LPop(ctx, queueName).Result()
+		popRequestID, err := rdb.LPop(ctx, redisKeyWorkingQueue).Result()
 
 		if err != nil {
 			time.Sleep(time.Second)
@@ -43,16 +46,9 @@ func Worker(wId int, queueName string, httpTimeOut time.Duration) {
 
 		resp, err := client.Do(doReq)
 		if err != nil || resp.StatusCode >= 400 {
-			nextQueue := ""
-			switch queueName {
-			case "hnf:queue:normal":
-				nextQueue = "hnf:queue:failed1"
-			case "hnf:queue:failed1":
-				nextQueue = "hnf:queue:failed2"
-			}
-
-			if nextQueue != "" {
-				err = rdb.RPush(ctx, nextQueue, popRequestID).Err()
+			if failedQueue != "" {
+				fmt.Println("Delegate to", failedQueue, "the request", popRequestID)
+				err = rdb.RPush(ctx, redisKeyFailedQueue, popRequestID).Err()
 				if err != nil {
 					panic(err)
 				}

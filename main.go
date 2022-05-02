@@ -3,25 +3,80 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"net"
 	"net/http"
-	"time"
+	"os"
 
 	"github.com/khanhicetea/hitnforget/server"
 	"github.com/khanhicetea/hitnforget/worker"
+	cli "github.com/urfave/cli/v2"
 )
 
 func main() {
-	fmt.Println("Hit N Forget")
+	app := &cli.App{
+		Name:        "HitNForget",
+		Description: "HTTP Later Server",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "Load configuration from `FILE`",
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name:    "server",
+				Aliases: []string{"s"},
+				Usage:   "Run HTTP queue server",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "bind",
+						Usage: "Binding address",
+						Value: "127.0.0.1",
+					},
+					&cli.StringFlag{
+						Name:  "port",
+						Usage: "Binding port",
+						Value: "3333",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					bind := c.Value("bind").(string)
+					port := c.Value("port").(string)
+					fmt.Printf("Running queue server on %s:%s ...", bind, port)
+					http.ListenAndServe(net.JoinHostPort(bind, port), server.HTTPHandler())
+					return nil
+				},
+			},
+			{
+				Name:    "worker",
+				Aliases: []string{"w"},
+				Usage:   "Run worker",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "working_queue",
+						Usage: "Working queue name",
+						Value: "default",
+					},
+					&cli.StringFlag{
+						Name:  "failed_queue",
+						Usage: "Next failed queue",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					workingQueue := c.Value("working_queue").(string)
+					failedQueue := c.Value("failed_queue").(string)
+					fmt.Printf("Running worker on %s and fallback to %s ...", workingQueue, failedQueue)
+					worker.Worker(rand.Intn(100), workingQueue, failedQueue)
+					return nil
+				},
+			},
+		},
+	}
 
-	server := server.NewServer()
-
-	go worker.Worker(1, "hnf:queue:normal", time.Minute*1)
-	go worker.Worker(2, "hnf:queue:normal", time.Minute*1)
-	go worker.Worker(3, "hnf:queue:normal", time.Minute*1)
-	go worker.Worker(11, "hnf:queue:failed1", time.Minute*2)
-	go worker.Worker(21, "hnf:queue:failed2", time.Minute*3)
-
-	err := http.ListenAndServe("127.0.0.1:3333", server)
+	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -11,6 +11,10 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+func QueueRedisKey(queueName string) string {
+	return fmt.Sprintf("hnf:queue:%s", queueName)
+}
+
 func QueueRequest(r *http.Request, rdb *redis.Client, ctx context.Context, queueName string) (int64, error) {
 	dr, _ := httputil.DumpRequest(r, true)
 
