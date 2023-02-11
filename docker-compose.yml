@@ -1,0 +1,28 @@
+version: "2"
+x-hnf-service: &hnf-service
+  image: khanhicetea/hitnforget
+  depends_on:
+    - redis
+  restart: always
+
+services:
+  redis:
+    image: redis:5.0-alpine
+    restart: always
+  server:
+    <<: *hnf-service
+    command: /hnf s --bind 0.0.0.0 --redis redis:6379
+    ports:
+      - "8080:8080"
+  workermain1:
+    <<: *hnf-service
+    command: /hnf w --redis redis:6379 --failed_queue 1
+  workermain2:
+    <<: *hnf-service
+    command: /hnf w --redis redis:6379 --failed_queue 1
+  workerfail1:
+    <<: *hnf-service
+    command: /hnf w --redis redis:6379 --working_queue 1 --failed_queue 2
+  workerfail2:
+    <<: *hnf-service
+    command: /hnf w --redis redis:6379 --working_queue 2

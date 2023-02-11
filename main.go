@@ -237,8 +237,9 @@ func main() {
 				Action: func(c *cli.Context) error {
 					workingQueue := c.Value("working_queue").(string)
 					failedQueue := c.Value("failed_queue").(string)
-					workerId := rand.Intn(10000)
-					fmt.Printf("Running WORKER #%d on %s and fallback to %s ...", workerId, workingQueue, failedQueue)
+					s1 := rand.NewSource(time.Now().UnixNano())
+					r1 := rand.New(s1)
+					workerId := r1.Intn(10000)
 					runWorker(c, workerId, workingQueue, failedQueue)
 					return nil
 				},
