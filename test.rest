@@ -1,0 +1,11 @@
+http://localhost:8080/_queue
+X-Hnf-Url: https://myip.wtf/json
+X-Hnf-Method: GET
+X-Hnf-Expected-Status: 2**
+
+###
+
+http://localhost:8080/_queue
+X-Hnf-Url: https://myip.wtf/json
+X-Hnf-Method: GET
+X-Hnf-Expected-Status: 4**
